@@ -18,10 +18,8 @@ namespace Microsoft.Data.Entity.Internal
             EnsureNoShadowEntities(model);
             EnsureNoShadowKeys(model);
             EnsureNonNullPrimaryKeys(model);
-            EnsureClrPropertyTypesMatch(model);
             EnsureValidForeignKeyChains(model);
         }
-
 
         protected virtual void EnsureNoShadowEntities([NotNull] IModel model)
         {
@@ -76,33 +74,6 @@ namespace Microsoft.Data.Entity.Internal
             }
         }
 
-        protected virtual void EnsureClrPropertyTypesMatch([NotNull] IModel model)
-        {
-            foreach (var entityType in model.EntityTypes)
-            {
-                foreach (var property in entityType.GetDeclaredProperties())
-                {
-                    if (property.IsShadowProperty
-                        || !entityType.HasClrType())
-                    {
-                        continue;
-                    }
-
-                    var clrProperty = entityType.ClrType.GetPropertiesInHierarchy(property.Name).FirstOrDefault();
-                    if (clrProperty == null)
-                    {
-                        ShowError(CoreStrings.NoClrProperty(property.Name, entityType.Name));
-                        continue;
-                    }
-
-                    if (property.ClrType != clrProperty.PropertyType)
-                    {
-                        ShowError(CoreStrings.PropertyWrongClrType(property.Name, entityType.Name));
-                    }
-                }
-            }
-        }
-
         protected virtual void EnsureValidForeignKeyChains([NotNull] IModel model)
         {
             var verifiedProperties = new Dictionary<IProperty, IProperty>();
@@ -110,10 +81,10 @@ namespace Microsoft.Data.Entity.Internal
             {
                 foreach (var foreignKey in entityType.GetForeignKeys())
                 {
-                    foreach (var referencedProperty in foreignKey.Properties)
+                    foreach (var property in foreignKey.Properties)
                     {
                         string errorMessage;
-                        VerifyRootPrincipal(referencedProperty, verifiedProperties, ImmutableList<IForeignKey>.Empty, out errorMessage);
+                        VerifyRootPrincipal(property, entityType, verifiedProperties, ImmutableList<IForeignKey>.Empty, out errorMessage);
                         if (errorMessage != null)
                         {
                             ShowError(errorMessage);
@@ -124,24 +95,25 @@ namespace Microsoft.Data.Entity.Internal
         }
 
         private IProperty VerifyRootPrincipal(
-            IProperty principalProperty,
+            IProperty keyProperty,
+            IEntityType entityType,
             Dictionary<IProperty, IProperty> verifiedProperties,
             ImmutableList<IForeignKey> visitedForeignKeys,
             out string errorMessage)
         {
             errorMessage = null;
             IProperty rootPrincipal;
-            if (verifiedProperties.TryGetValue(principalProperty, out rootPrincipal))
+            if (verifiedProperties.TryGetValue(keyProperty, out rootPrincipal))
             {
                 return rootPrincipal;
             }
 
             var rootPrincipals = new Dictionary<IProperty, IForeignKey>();
-            foreach (var foreignKey in principalProperty.DeclaringEntityType.GetForeignKeys())
+            foreach (var foreignKey in entityType.GetForeignKeys())
             {
                 for (var index = 0; index < foreignKey.Properties.Count; index++)
                 {
-                    if (principalProperty == foreignKey.Properties[index])
+                    if (keyProperty == foreignKey.Properties[index])
                     {
                         var nextPrincipalProperty = foreignKey.PrincipalKey.Properties[index];
                         if (visitedForeignKeys.Contains(foreignKey))
@@ -151,23 +123,23 @@ namespace Microsoft.Data.Entity.Internal
                             errorMessage = CoreStrings.CircularDependency(cycle.Select(fk => fk.ToString()).Join());
                             continue;
                         }
-                        rootPrincipal = VerifyRootPrincipal(nextPrincipalProperty, verifiedProperties, visitedForeignKeys.Add(foreignKey), out errorMessage);
+                        rootPrincipal = VerifyRootPrincipal(nextPrincipalProperty, foreignKey.PrincipalEntityType, verifiedProperties, visitedForeignKeys.Add(foreignKey), out errorMessage);
                         if (rootPrincipal == null)
                         {
-                            if (principalProperty.RequiresValueGenerator)
+                            if (keyProperty.RequiresValueGenerator)
                             {
-                                rootPrincipals[principalProperty] = foreignKey;
+                                rootPrincipals[keyProperty] = foreignKey;
                             }
                             continue;
                         }
 
-                        if (principalProperty.RequiresValueGenerator)
+                        if (keyProperty.RequiresValueGenerator)
                         {
                             ShowError(CoreStrings.ForeignKeyValueGenerationOnAdd(
-                                principalProperty.Name,
-                                principalProperty.DeclaringEntityType.DisplayName(),
+                                keyProperty.Name,
+                                keyProperty.DeclaringEntityType.DisplayName(),
                                 Property.Format(foreignKey.Properties)));
-                            return principalProperty;
+                            return keyProperty;
                         }
 
                         rootPrincipals[rootPrincipal] = foreignKey;
@@ -182,13 +154,13 @@ namespace Microsoft.Data.Entity.Internal
                     return null;
                 }
 
-                if (!principalProperty.RequiresValueGenerator)
+                if (!keyProperty.RequiresValueGenerator)
                 {
-                    ShowError(CoreStrings.PrincipalKeyNoValueGenerationOnAdd(principalProperty.Name, principalProperty.DeclaringEntityType.DisplayName()));
+                    ShowError(CoreStrings.PrincipalKeyNoValueGenerationOnAdd(keyProperty.Name, keyProperty.DeclaringEntityType.DisplayName()));
                     return null;
                 }
 
-                return principalProperty;
+                return keyProperty;
             }
 
             if (rootPrincipals.Count > 1)
@@ -209,7 +181,7 @@ namespace Microsoft.Data.Entity.Internal
 
             errorMessage = null;
             rootPrincipal = rootPrincipals.Keys.Single();
-            verifiedProperties[principalProperty] = rootPrincipal;
+            verifiedProperties[keyProperty] = rootPrincipal;
             return rootPrincipal;
         }
 

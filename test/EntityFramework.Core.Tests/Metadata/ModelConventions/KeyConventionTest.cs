@@ -153,14 +153,16 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
 
             var keyProperties = keyBuilder.Metadata.Properties;
 
-            Assert.True(keyProperties[0].RequiresValueGenerator);
+            Assert.True(((IProperty)keyProperties[0]).RequiresValueGenerator);
 
-            referencedEntityBuilder.HasForeignKey(
+            var foreignKeyBuilder = referencedEntityBuilder.HasForeignKey(
                 principalEntityBuilder,
                 referencedEntityBuilder.GetOrCreateProperties(properties, ConfigurationSource.Convention),
                 ConfigurationSource.Convention);
+            
+            Assert.Same(foreignKeyBuilder, new KeyConvention().Apply(foreignKeyBuilder));
 
-            Assert.Null(keyProperties[0].RequiresValueGenerator);
+            Assert.False(((IProperty)keyProperties[0]).RequiresValueGenerator);
         }
 
         [Fact]
@@ -185,11 +187,15 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
                 referencedEntityBuilder.GetOrCreateProperties(properties, ConfigurationSource.Convention),
                 ConfigurationSource.Convention);
 
-            Assert.Null(keyProperties[0].RequiresValueGenerator);
+            Assert.Same(relationshipBuilder, new KeyConvention().Apply(relationshipBuilder));
+
+            Assert.False(((IProperty)keyProperties[0]).RequiresValueGenerator);
 
             referencedEntityBuilder.RemoveForeignKey(relationshipBuilder.Metadata, ConfigurationSource.Convention);
 
-            Assert.True(keyProperties[0].RequiresValueGenerator);
+            new KeyConvention().Apply(referencedEntityBuilder, relationshipBuilder.Metadata);
+
+            Assert.True(((IProperty)keyProperties[0]).RequiresValueGenerator);
         }
 
         #endregion
@@ -238,8 +244,8 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
 
             var keyProperties = keyBuilder.Metadata.Properties;
 
-            Assert.Null(keyProperties[0].ValueGenerated);
-            Assert.Null(keyProperties[1].ValueGenerated);
+            Assert.Equal(ValueGenerated.Never, ((IProperty)keyProperties[0]).ValueGenerated);
+            Assert.Equal(ValueGenerated.Never, ((IProperty)keyProperties[1]).ValueGenerated);
         }
 
         [Fact]
@@ -280,8 +286,8 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
             Assert.Same(idProperty, entityBuilder.Metadata.GetProperty("Id"));
             Assert.Same(numberProperty, entityBuilder.Metadata.GetProperty("Number"));
 
-            Assert.Null(idProperty.ValueGenerated);
-            Assert.Equal(ValueGenerated.OnAdd, numberProperty.ValueGenerated);
+            Assert.Equal(ValueGenerated.Never, ((IProperty)idProperty).ValueGenerated);
+            Assert.Equal(ValueGenerated.OnAdd, ((IProperty)numberProperty).ValueGenerated);
         }
 
         [Fact]
@@ -317,14 +323,16 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
 
             var property = keyBuilder.Metadata.Properties.First();
 
-            Assert.Equal(ValueGenerated.OnAdd, property.ValueGenerated);
+            Assert.Equal(ValueGenerated.OnAdd, ((IProperty)property).ValueGenerated);
 
-            referencedEntityBuilder.HasForeignKey(
+            var relationshipBuilder= referencedEntityBuilder.HasForeignKey(
                 principalEntityBuilder,
                 referencedEntityBuilder.GetOrCreateProperties(properties, ConfigurationSource.Convention),
                 ConfigurationSource.Convention);
 
-            Assert.Null(property.ValueGenerated);
+            Assert.Same(relationshipBuilder, new KeyConvention().Apply(relationshipBuilder));
+
+            Assert.Equal(ValueGenerated.Never, ((IProperty)property).ValueGenerated);
         }
 
         [Fact]
@@ -349,7 +357,9 @@ namespace Microsoft.Data.Entity.Tests.Metadata.Conventions
                 referencedEntityBuilder.GetOrCreateProperties(properties, ConfigurationSource.Convention),
                 ConfigurationSource.Convention);
 
-            Assert.Null(property.ValueGenerated);
+            Assert.Same(relationshipBuilder, new KeyConvention().Apply(relationshipBuilder));
+
+            Assert.Equal(ValueGenerated.Never, ((IProperty)property).ValueGenerated);
 
             referencedEntityBuilder.RemoveForeignKey(relationshipBuilder.Metadata, ConfigurationSource.Convention);
 

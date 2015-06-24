@@ -14,6 +14,30 @@ namespace Microsoft.Data.Entity.Tests
     public class RelationalModelValidatorTest : LoggingModelValidatorTest
     {
         [Fact]
+        public override void Passes_on_GenerateOnAdd_not_set_on_principal_key_properties()
+        {
+            var model = new Entity.Metadata.Model();
+            var entityA = model.AddEntityType(typeof(A));
+            SetPrimaryKey(entityA);
+            var keyA = CreateKey(entityA);
+            var entityB = model.AddEntityType(typeof(B));
+            entityB.BaseType = entityA;
+
+            var discriminatorProperty = entityA.AddProperty("D", typeof(int));
+            entityA.Relational().DiscriminatorProperty = discriminatorProperty;
+            entityA.Relational().DiscriminatorValue = 0;
+            entityB.Relational().DiscriminatorValue = 1;
+
+            var dependentroperty = entityA.AddProperty("P1");
+            dependentroperty.ClrType = typeof(int?);
+            dependentroperty.IsShadowProperty = false;
+
+            CreateForeignKey(entityB, new[] { dependentroperty }, keyA);
+
+            Validate(model);
+        }
+
+        [Fact]
         public virtual void Detects_duplicate_table_names()
         {
             var model = new Entity.Metadata.Model();

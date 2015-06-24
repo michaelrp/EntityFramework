@@ -551,21 +551,15 @@ namespace Microsoft.Data.Entity.FunctionalTests
 
         [Fact]
         public virtual void Calling_Reload_on_a_Unchanged_entity_makes_the_entity_unchanged()
-        {
-            TestReloadPositive(EntityState.Unchanged);
-        }
+            => TestReloadPositive(EntityState.Unchanged);
 
         [Fact]
         public virtual void Calling_Reload_on_a_Modified_entity_makes_the_entity_unchanged()
-        {
-            TestReloadPositive(EntityState.Modified);
-        }
+            => TestReloadPositive(EntityState.Modified);
 
         [Fact]
         public virtual void Calling_Reload_on_a_Deleted_entity_makes_the_entity_unchanged()
-        {
-            TestReloadPositive(EntityState.Deleted);
-        }
+            => TestReloadPositive(EntityState.Deleted);
 
         private void TestReloadPositive(EntityState state)
         {
@@ -586,7 +580,6 @@ namespace Microsoft.Data.Entity.FunctionalTests
         #region Tests for calling ReloadAsync on an entity in various states
 
         // TODO: Reload
-
         [Fact]
         public virtual async Task Calling_ReloadAsync_on_an_Added_entity_throws()
         {
@@ -624,21 +617,15 @@ namespace Microsoft.Data.Entity.FunctionalTests
 
         [Fact]
         public virtual Task Calling_ReloadAsync_on_a_Unchanged_entity_makes_the_entity_unchanged()
-        {
-            return TestReloadAsyncPositive(EntityState.Unchanged);
-        }
+            => TestReloadAsyncPositive(EntityState.Unchanged);
 
         [Fact]
         public virtual Task Calling_ReloadAsync_on_a_Modified_entity_makes_the_entity_unchanged()
-        {
-            return TestReloadAsyncPositive(EntityState.Modified);
-        }
+            => TestReloadAsyncPositive(EntityState.Modified);
 
         [Fact]
         public virtual Task Calling_ReloadAsync_on_a_Deleted_entity_makes_the_entity_unchanged()
-        {
-            return TestReloadAsyncPositive(EntityState.Deleted);
-        }
+            => TestReloadAsyncPositive(EntityState.Deleted);
 
         private async Task TestReloadAsyncPositive(EntityState state)
         {
@@ -666,10 +653,7 @@ namespace Microsoft.Data.Entity.FunctionalTests
             // default do nothing. Allow provider-specific entry reset
         }
 
-        protected F1Context CreateF1Context()
-        {
-            return Fixture.CreateContext(TestStore);
-        }
+        protected F1Context CreateF1Context() => Fixture.CreateContext(TestStore);
 
         protected OptimisticConcurrencyTestBase(TFixture fixture)
         {
@@ -678,10 +662,7 @@ namespace Microsoft.Data.Entity.FunctionalTests
             TestStore = Fixture.CreateTestStore();
         }
 
-        public void Dispose()
-        {
-            TestStore.Dispose();
-        }
+        public void Dispose() => TestStore.Dispose();
 
         protected TFixture Fixture { get; }
 
@@ -711,10 +692,7 @@ namespace Microsoft.Data.Entity.FunctionalTests
         /// </summary>
         private Task ConcurrencyTestAsync(
             Action<F1Context> change, Action<F1Context, DbUpdateException> resolver,
-            Action<F1Context> validator)
-        {
-            return ConcurrencyTestAsync(change, change, resolver, validator);
-        }
+            Action<F1Context> validator) => ConcurrencyTestAsync(change, change, resolver, validator);
 
         /// <summary>
         ///     Runs the two actions with two different contexts and calling
